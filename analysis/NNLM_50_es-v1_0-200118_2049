@@ -1,0 +1,1545 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "codemirror_mode": {
+        "name": "ipython",
+        "version": 3
+      },
+      "file_extension": ".py",
+      "mimetype": "text/x-python",
+      "name": "python",
+      "nbconvert_exporter": "python",
+      "pygments_lexer": "ipython3",
+      "version": "3.6.9"
+    },
+    "colab": {
+      "name": "base.ipynb",
+      "provenance": [],
+      "include_colab_link": true
+    },
+    "accelerator": "GPU"
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/eduardofv/lang_model_eval/blob/master/analysis/NNLM_50_es-v1_0-200118_2049\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "vClH3pInKLsA",
+        "colab_type": "text"
+      },
+      "source": [
+        "# Language Model Evaluation"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "-RUhH0OjOj8F",
+        "colab_type": "code",
+        "outputId": "fd841fae-bf03-4128-f8ce-d82f8e54c574",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 34
+        }
+      },
+      "source": [
+        "%tensorflow_version 2.x"
+      ],
+      "execution_count": 1,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "TensorFlow 2.x selected.\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "pRGcQQC_KLsC",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "EXPERIMENT_CONFIG = {\n",
+        "    \"EXPERIMENT-NAME\": \"NNLM_50_es\", \n",
+        "    \"EXPERIMENT-VERSION\": \"v1_0\",\n",
+        "}"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "Va_KsePHKLsG",
+        "colab_type": "text"
+      },
+      "source": [
+        "## Version log\n",
+        "\n",
+        "### base\n",
+        "\n",
+        "Punto de partida\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "9iWCSb8LKLsH",
+        "colab_type": "text"
+      },
+      "source": [
+        "## Development"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "edcEBpUkKLsI",
+        "colab_type": "text"
+      },
+      "source": [
+        "### Initialize"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "sJWbZ-wQKLsJ",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "%matplotlib inline\n",
+        "\n",
+        "import sys\n",
+        "import os\n",
+        "\n",
+        "import time\n",
+        "import pickle\n",
+        "import json\n",
+        "import numpy as np\n",
+        "import pandas as pd\n",
+        "import matplotlib.pyplot as plt\n",
+        "\n",
+        "import tensorflow as tf\n",
+        "import tensorflow.keras as k\n",
+        "import tensorflow_hub as hub\n",
+        "\n",
+        "from tensorflow.keras.models import Sequential\n",
+        "from tensorflow.keras.layers import Embedding, LSTM, Bidirectional, Dense, Dropout\n",
+        "from tensorflow.keras.optimizers import RMSprop\n",
+        "from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint\n",
+        "from tensorflow.keras.utils import to_categorical\n",
+        "\n",
+        "from sklearn.metrics import balanced_accuracy_score"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "wQY6DnBQKcYA",
+        "colab_type": "code",
+        "outputId": "4f7fd6f2-ce65-4b87-9d68-ab1586af6393",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 88
+        }
+      },
+      "source": [
+        "DATA_DIR = \"../data\"\n",
+        "LOG_DIR = \"../logs\"\n",
+        "SAVED_MODEL_DIR = \"../saved_models\"\n",
+        "\n",
+        "IN_COLAB = 'google.colab' in sys.modules\n",
+        "if IN_COLAB:\n",
+        "  from google.colab import drive\n",
+        "  drive.mount('/content/drive')\n",
+        "  DATA_DIR = \"/content/drive/My Drive/datasets/lang_model_eval\"\n",
+        "  LOG_DIR = \"logs\"\n",
+        "  SAVED_MODEL_DIR = \"saved_models\"\n",
+        "  !mkdir logs\n",
+        "  !mkdir saved_models"
+      ],
+      "execution_count": 4,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Drive already mounted at /content/drive; to attempt to forcibly remount, call drive.mount(\"/content/drive\", force_remount=True).\n",
+            "mkdir: cannot create directory ‘logs’: File exists\n",
+            "mkdir: cannot create directory ‘saved_models’: File exists\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "8eSfOOFyKLsM",
+        "colab_type": "text"
+      },
+      "source": [
+        "### Experiment Config"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "gu0lDl5EKLsN",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "EC = EXPERIMENT_CONFIG\n",
+        "\n",
+        "EC[\"RANDOM_SEED\"] = 12348\n",
+        "EC[\"DATASET_FN\"] = f\"{DATA_DIR}/es-train.csv\"\n",
+        "EC[\"ROWS_TO_LOAD\"] = None#None == all \n",
+        "# how much data will reserve for test set (of the DS prop to use) (0.10)\n",
+        "EC[\"TEST_SET_SPLIT\"] = 0.05\n",
+        "\n",
+        "#TFHUB_EMB_MODEL = \"https://tfhub.dev/google/universal-sentence-encoder/2\" \n",
+        "# download the module manually if network problems \n",
+        "# like URLError: <urlopen error [Errno -3] Temporary failure in name resolution>\n",
+        "# check https://www.tensorflow.org/hub/common_issues \n",
+        "#TFHUB_EMB_MODEL = \"../tf_hub_cache/gnews-swivel-20dim-v1\"\n",
+        "\n",
+        "EC[\"TFHUB-EMB_MODEL\"] = \"https://tfhub.dev/google/nnlm-es-dim50/2\"\n",
+        "EC[\"TFHUB-EMB_MODEL_DIM\"] = 50\n",
+        "\n",
+        "#Model parameters\n",
+        "EC[\"MODEL-LM_IS_TRAINABLE\"] = True\n",
+        "EC[\"MODEL-DENSE_UNITS\"] = 512\n",
+        "EC[\"MODEL-DENSE_ACTIVATION\"] = \"relu\"\n",
+        "EC[\"MODEL-DENSE_DROPOUT_RATE\"] = 0.25\n",
+        "EC[\"MODEL-OPTIMIZER\"] = \"Adam\"\n",
+        "EC[\"MODEL-LOSS\"] = 'sparse_categorical_crossentropy'\n",
+        "\n",
+        "#Train parameters\n",
+        "EC[\"TRAIN-BATCH_SIZE\"] = 1024\n",
+        "EC[\"TRAIN-EPOCHS\"] = 8\n",
+        "EC[\"TRAIN-INITIAL_EPOCH\"] = 0\n",
+        "# how much of the data will be used for validation (of the DS prop to use) (0.05)\n",
+        "EC[\"TRAIN-VALIDATION_SET_SPLIT\"] = 0.001\n",
+        "\n",
+        "EC[\"RESULTS-HISTORIES\"] = []\n",
+        "\n",
+        "# specify a small proportion to speed things while testing, 1.0 when running full training\n",
+        "#DATASET_PROPORTION_TO_USE = 1.0"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "rNcisGylKLsQ",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "#initialize env\n",
+        "#seeds to make reproducible\n",
+        "#todo: check reproducibility\n",
+        "np.random.seed(EC[\"RANDOM_SEED\"])\n",
+        "tf.random.set_seed(EC[\"RANDOM_SEED\"])\n",
+        "\n",
+        "pd.options.display.max_rows = 10"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "9tkIrPeJKLsT",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "def show_env(as_string=True):\n",
+        "    my_env = []\n",
+        "    my_env.append(f\"Host: {os.getenv('HOST_HOSTNAME')}_{os.getenv('HOSTNAME')}\")\n",
+        "    a = !uname -a\n",
+        "    my_env.append(f\"OS: {a[0]}\")\n",
+        "    my_env.append(f\"Python: {sys.version}\")\n",
+        "    my_env.append(f\"Tensorflow: {tf.__version__}\")\n",
+        "    if len(tf.config.list_physical_devices(\"GPU\")):\n",
+        "        my_env.append(\"GPU: available\")\n",
+        "        a=!nvidia-smi -L\n",
+        "        my_env.append(\"\\n\".join(a))\n",
+        "    else:\n",
+        "        my_env.append(\"GPU: not available\")\n",
+        "    my_env.append(f\"Keras: {tf.keras.__version__}\")\n",
+        "    my_env.append(f\"TFHub: {hub.__version__}\")\n",
+        "    if as_string:\n",
+        "        my_env = \"\\n\".join(my_env)\n",
+        "    return my_env\n",
+        "\n",
+        "#print(show_env())"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "FgkHxpSgKLsW",
+        "colab_type": "text"
+      },
+      "source": [
+        "## Load and prepare datasets"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "d1oqpVN0KLsX",
+        "colab_type": "code",
+        "outputId": "54c9e419-99a5-48c3-e739-159242648bf5",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 204
+        }
+      },
+      "source": [
+        "df = pd.read_csv(EC['DATASET_FN'], \n",
+        "                 nrows = EC['ROWS_TO_LOAD']).dropna(axis=0).sample(frac=1).reset_index()\n",
+        "df = df[[\"title\", \"category\"]]\n",
+        "df.head()"
+      ],
+      "execution_count": 8,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>title</th>\n",
+              "      <th>category</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>Neumáticos Windforce 205r55r16 91v Catchgre Gp100</td>\n",
+              "      <td>AUTOMOTIVE_TIRES</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>Colchoneta Con Cierre 1 X 0.5 X 0.04 M Quuz Azul</td>\n",
+              "      <td>EXERCISE_MATS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>Bomba De Freno Doble Circuito Fiat 125</td>\n",
+              "      <td>BRAKE_MASTER_CYLINDERS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>Lamparas H4 Osram.</td>\n",
+              "      <td>CAR_LIGHT_BULBS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>Sensor Rpm Posicion Ciguenal Arbol Bmw 323ti</td>\n",
+              "      <td>CAR_ENGINE_CAMSHAFT_SENSORS</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "                                               title                     category\n",
+              "0  Neumáticos Windforce 205r55r16 91v Catchgre Gp100             AUTOMOTIVE_TIRES\n",
+              "1   Colchoneta Con Cierre 1 X 0.5 X 0.04 M Quuz Azul                EXERCISE_MATS\n",
+              "2             Bomba De Freno Doble Circuito Fiat 125       BRAKE_MASTER_CYLINDERS\n",
+              "3                                 Lamparas H4 Osram.              CAR_LIGHT_BULBS\n",
+              "4       Sensor Rpm Posicion Ciguenal Arbol Bmw 323ti  CAR_ENGINE_CAMSHAFT_SENSORS"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 8
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "DvdEBcEsKLsc",
+        "colab_type": "code",
+        "outputId": "9744e1c1-8e36-4e0f-9673-137399e2b055",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 34
+        }
+      },
+      "source": [
+        "output_dim = len(df[\"category\"].unique())\n",
+        "print(f\"Unique categories: {output_dim}\")"
+      ],
+      "execution_count": 9,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Unique categories: 1574\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "98QfwxDxKLsg",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "cat_dict = dict(zip(df[\"category\"].unique(), np.arange(output_dim)))\n",
+        "inverse_cat_dict = dict(zip(cat_dict.values(), cat_dict.keys()))\n",
+        "labels = df[\"category\"].map(cat_dict)"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "xnrGBhIvKLsk",
+        "colab_type": "text"
+      },
+      "source": [
+        "### Split datasets"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "z03l7X0oKLsl",
+        "colab_type": "code",
+        "outputId": "3f15d142-e574-4bcf-ebf1-113236934670",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 85
+        }
+      },
+      "source": [
+        "num_samples = len(df)\n",
+        "num_test_samples = int(num_samples * EC[\"TEST_SET_SPLIT\"])\n",
+        "num_training_samples = num_samples - num_test_samples\n",
+        "\n",
+        "training_set_data = df[\"title\"].head(num_training_samples)\n",
+        "training_set_labels = labels[:num_training_samples]\n",
+        "test_set_data = df[\"title\"].tail(num_test_samples)\n",
+        "test_set_labels = labels[-num_test_samples:]\n",
+        "\n",
+        "print(f\"Training set shape: {training_set_data.shape}\")\n",
+        "print(f\"Training labels shape: {training_set_labels.shape}\")\n",
+        "print(f\"Test set shape: {test_set_data.shape}\")\n",
+        "print(f\"Test labels shape: {test_set_labels.shape}\")"
+      ],
+      "execution_count": 11,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Training set shape: (9500000,)\n",
+            "Training labels shape: (9500000,)\n",
+            "Test set shape: (500000,)\n",
+            "Test labels shape: (500000,)\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "mQnK3ZYKKLsn",
+        "colab_type": "text"
+      },
+      "source": [
+        "### Build Model"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "T6ZUr9dMKLso",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "## load TF Hub embedding module\n",
+        "hub_layer = hub.KerasLayer(EC[\"TFHUB-EMB_MODEL\"], \n",
+        "                           output_shape=[EC[\"TFHUB-EMB_MODEL_DIM\"]], \n",
+        "                           input_shape=[], \n",
+        "                           trainable=EC[\"MODEL-LM_IS_TRAINABLE\"], \n",
+        "                           dtype=tf.string,\n",
+        "                           name=\"LANG_MODEL\") \n",
+        "#hub_layer(np.array(training_set_data[:3]))"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "scrolled": false,
+        "id": "CbPGOcf_KLsr",
+        "colab_type": "code",
+        "outputId": "a78b3e05-e321-41a8-a304-fb2c37d5f0d0",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 357
+        }
+      },
+      "source": [
+        "model = Sequential(name = f\"{EC['EXPERIMENT-NAME']}-{EC['EXPERIMENT-VERSION']}\")\n",
+        "model.add(hub_layer)\n",
+        "model.add(Dense(units = EC[\"MODEL-DENSE_UNITS\"], \n",
+        "                activation = EC[\"MODEL-DENSE_ACTIVATION\"],  \n",
+        "                name = \"DEN_1\"))\n",
+        "model.add(Dropout(rate = EC[\"MODEL-DENSE_DROPOUT_RATE\"],\n",
+        "                 name = \"DROP_1\"))\n",
+        "model.add(Dense(units = EC[\"MODEL-DENSE_UNITS\"], \n",
+        "                activation = EC[\"MODEL-DENSE_ACTIVATION\"],  \n",
+        "                name = \"DEN_2\"))\n",
+        "model.add(Dropout(rate = EC[\"MODEL-DENSE_DROPOUT_RATE\"],\n",
+        "                 name=\"DROP_2\"))\n",
+        "\n",
+        "model.add(Dense(output_dim, activation=\"softmax\", name=\"DEN_OUT\"))\n",
+        "\n",
+        "model.compile(optimizer=EC[\"MODEL-OPTIMIZER\"], \n",
+        "              loss=EC[\"MODEL-LOSS\"])\n",
+        "EC[\"MODEL-SUMMARY\"] = []\n",
+        "model.summary(print_fn = lambda x: EC[\"MODEL-SUMMARY\"].append(x))\n",
+        "model.summary()"
+      ],
+      "execution_count": 13,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Model: \"NNLM_50_es-v1_0\"\n",
+            "_________________________________________________________________\n",
+            "Layer (type)                 Output Shape              Param #   \n",
+            "=================================================================\n",
+            "LANG_MODEL (KerasLayer)      (None, 50)                48832000  \n",
+            "_________________________________________________________________\n",
+            "DEN_1 (Dense)                (None, 512)               26112     \n",
+            "_________________________________________________________________\n",
+            "DROP_1 (Dropout)             (None, 512)               0         \n",
+            "_________________________________________________________________\n",
+            "DEN_2 (Dense)                (None, 512)               262656    \n",
+            "_________________________________________________________________\n",
+            "DROP_2 (Dropout)             (None, 512)               0         \n",
+            "_________________________________________________________________\n",
+            "DEN_OUT (Dense)              (None, 1574)              807462    \n",
+            "=================================================================\n",
+            "Total params: 49,928,230\n",
+            "Trainable params: 49,928,230\n",
+            "Non-trainable params: 0\n",
+            "_________________________________________________________________\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "rCMy4icFKLsu",
+        "colab_type": "text"
+      },
+      "source": [
+        "### Train and Test"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "S7G0O9bRKLsv",
+        "colab_type": "code",
+        "outputId": "9e7f2157-120c-4983-a58a-34d0cf77652f",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 187
+        }
+      },
+      "source": [
+        "#run params\n",
+        "runid = \"%s-%s-%s\"%\\\n",
+        "    (EC[\"EXPERIMENT-NAME\"],\n",
+        "     EC[\"EXPERIMENT-VERSION\"],\n",
+        "     time.strftime(time.strftime('%y%m%d_%H%M',time.localtime())))\n",
+        "\n",
+        "EC[\"EXPERIMENT-RUNID\"] = runid\n",
+        "\n",
+        "#Create saved model dir     \n",
+        "directory = SAVED_MODEL_DIR+\"/\"+runid\n",
+        "if not os.path.exists(directory):\n",
+        "    os.makedirs(directory)\n",
+        "EC[\"EXPERIMENT-SAVE_DIR\"] = directory\n",
+        "\n",
+        "EC[\"EXPERIMENT-LOG_DIR\"] = f\"{LOG_DIR}/{runid}\"\n",
+        "EC[\"EXPERIMENT-BEST_MODEL_FN\"] = f\"{directory}/model.hdf5\"\n",
+        "\n",
+        "EC[\"EXPERIMENT-ENVIRONMENT\"]  = show_env(as_string=False)\n",
+        "\n",
+        "print(show_env())\n",
+        "print(f\"runid: {runid}\")"
+      ],
+      "execution_count": 14,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Host: None_411f2524889d\n",
+            "OS: Linux 411f2524889d 4.14.137+ #1 SMP Thu Aug 8 02:47:02 PDT 2019 x86_64 x86_64 x86_64 GNU/Linux\n",
+            "Python: 3.6.9 (default, Nov  7 2019, 10:44:02) \n",
+            "[GCC 8.3.0]\n",
+            "Tensorflow: 2.1.0-rc1\n",
+            "GPU: available\n",
+            "GPU 0: Tesla T4 (UUID: GPU-b9e342d4-d011-5367-b2ea-0d6b4b4fa126)\n",
+            "Keras: 2.2.4-tf\n",
+            "TFHub: 0.7.0\n",
+            "runid: NNLM_50_es-v1_0-200118_2049\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "E0D-4PDcKLsy",
+        "colab_type": "code",
+        "outputId": "552751bb-f19c-4e9b-bc4e-abd0d6cfe60b",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 646
+        }
+      },
+      "source": [
+        "print('Training...')\n",
+        "\n",
+        "tensorboard = TensorBoard(log_dir=EC[\"EXPERIMENT-LOG_DIR\"])\n",
+        "checkpoint = ModelCheckpoint(EC[\"EXPERIMENT-BEST_MODEL_FN\"], \n",
+        "                             monitor='val_loss',\n",
+        "                             verbose=1, save_best_only=True, mode=\"min\")\n",
+        "\n",
+        "# train\n",
+        "t0 = time.time()\n",
+        "EC[\"EXPERIMENT-STARTED_AT\"] = t0\n",
+        "print(\"Start:\" + time.strftime(\"%Y%m%d_%H%M\", time.localtime()))\n",
+        "history = model.fit(np.array(training_set_data), \n",
+        "          training_set_labels,\n",
+        "          batch_size = EC[\"TRAIN-BATCH_SIZE\"],\n",
+        "          epochs = EC[\"TRAIN-EPOCHS\"],\n",
+        "          initial_epoch = EC[\"TRAIN-INITIAL_EPOCH\"],\n",
+        "          validation_split = EC[\"TRAIN-VALIDATION_SET_SPLIT\"],\n",
+        "          verbose=2,\n",
+        "          callbacks=[tensorboard, checkpoint])\n",
+        "\n",
+        "tfin = time.time()\n",
+        "EC[\"EXPERIMENT-FINISHED_AT\"] = tfin\n",
+        "print(\"End:\" + time.strftime(\"%Y%m%d_%H%M\",time.localtime()))\n",
+        "ttook = tfin - t0 \n",
+        "EC[\"EXPERIMENT-TRAINIG_TOOK\"] = ttook\n",
+        "print(f\"{ttook} sec, {ttook/60} min, {ttook/3600} hrs\")"
+      ],
+      "execution_count": 15,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Training...\n",
+            "Start:20200118_2049\n",
+            "Train on 9490500 samples, validate on 9500 samples\n",
+            "Epoch 1/8\n",
+            "\n",
+            "Epoch 00001: val_loss improved from inf to 0.84010, saving model to saved_models/NNLM_50_es-v1_0-200118_2049/model.hdf5\n",
+            "9490500/9490500 - 309s - loss: 1.2100 - val_loss: 0.8401\n",
+            "Epoch 2/8\n",
+            "\n",
+            "Epoch 00002: val_loss improved from 0.84010 to 0.77218, saving model to saved_models/NNLM_50_es-v1_0-200118_2049/model.hdf5\n",
+            "9490500/9490500 - 308s - loss: 0.8399 - val_loss: 0.7722\n",
+            "Epoch 3/8\n",
+            "\n",
+            "Epoch 00003: val_loss improved from 0.77218 to 0.75458, saving model to saved_models/NNLM_50_es-v1_0-200118_2049/model.hdf5\n",
+            "9490500/9490500 - 308s - loss: 0.7800 - val_loss: 0.7546\n",
+            "Epoch 4/8\n",
+            "\n",
+            "Epoch 00004: val_loss improved from 0.75458 to 0.73814, saving model to saved_models/NNLM_50_es-v1_0-200118_2049/model.hdf5\n",
+            "9490500/9490500 - 307s - loss: 0.7480 - val_loss: 0.7381\n",
+            "Epoch 5/8\n",
+            "\n",
+            "Epoch 00005: val_loss improved from 0.73814 to 0.73715, saving model to saved_models/NNLM_50_es-v1_0-200118_2049/model.hdf5\n",
+            "9490500/9490500 - 307s - loss: 0.7269 - val_loss: 0.7371\n",
+            "Epoch 6/8\n",
+            "\n",
+            "Epoch 00006: val_loss improved from 0.73715 to 0.72711, saving model to saved_models/NNLM_50_es-v1_0-200118_2049/model.hdf5\n",
+            "9490500/9490500 - 307s - loss: 0.7127 - val_loss: 0.7271\n",
+            "Epoch 7/8\n",
+            "\n",
+            "Epoch 00007: val_loss did not improve from 0.72711\n",
+            "9490500/9490500 - 305s - loss: 0.7022 - val_loss: 0.7290\n",
+            "Epoch 8/8\n",
+            "\n",
+            "Epoch 00008: val_loss did not improve from 0.72711\n",
+            "9490500/9490500 - 306s - loss: 0.6941 - val_loss: 0.7348\n",
+            "End:20200118_2130\n",
+            "2459.9193704128265 sec, 40.99865617354711 min, 0.6833109362257852 hrs\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "jtGI4GzjKLs0",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "EC[\"RESULTS-HISTORIES\"].append(history.history)"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "0o4qDxyZKLs3",
+        "colab_type": "text"
+      },
+      "source": [
+        "## Test"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "hEJBZC4FKLs4",
+        "colab_type": "code",
+        "outputId": "fe3f3718-2fde-4836-8504-82de3919b88a",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 51
+        }
+      },
+      "source": [
+        "#Use last model\n",
+        "analysis_model = model\n",
+        "#Load best model\n",
+        "#analysis_model = tf.keras.models.load_model(directory+\"/model.hdf5\", \n",
+        "#                                            custom_objects={\n",
+        "#                                                \"KerasLayer\":hub_layer\n",
+        "#                                            })\n",
+        "print(\"Predict:\")\n",
+        "predictions = analysis_model.predict(np.array(test_set_data), verbose=1)"
+      ],
+      "execution_count": 17,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Predict:\n",
+            "500000/500000 [==============================] - 44s 87us/sample\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "scrolled": true,
+        "id": "M1pCa6AwKLs7",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "#predictions[0]"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "scrolled": true,
+        "id": "Ec5zBsavKLs9",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "inverse_cat_dict = dict(zip(cat_dict.values(), cat_dict.keys()))\n",
+        "predicted_categories = [inverse_cat_dict[np.argmax(p)] for p in predictions]\n",
+        "#predicted_categories"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "scrolled": true,
+        "id": "k6tKZ0AiKLtA",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "real_categories = [inverse_cat_dict[p] for p in test_set_labels]\n",
+        "#real_categories"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "1K7uUl8vKLtF",
+        "colab_type": "text"
+      },
+      "source": [
+        "### Balanced Accuracy"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "eqsnMpusKLtG",
+        "colab_type": "code",
+        "outputId": "c9ca6ce1-c616-4eef-a94f-89a748d868f3",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 34
+        }
+      },
+      "source": [
+        "bac = balanced_accuracy_score(real_categories, predicted_categories)\n",
+        "EC[\"RESULTS-BALANCED_ACCURACY\"] = bac\n",
+        "bac"
+      ],
+      "execution_count": 21,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "0.7978532223417765"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 21
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "G7XoU-gkKLtJ",
+        "colab_type": "text"
+      },
+      "source": [
+        "### Save results with metadata"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "39YzmSAIKLtK",
+        "colab_type": "code",
+        "outputId": "75f018f1-b306-464a-fa35-5d6b5e26ddb4",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 1000
+        }
+      },
+      "source": [
+        "EC"
+      ],
+      "execution_count": 22,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "{'DATASET_FN': '/content/drive/My Drive/datasets/lang_model_eval/es-train.csv',\n",
+              " 'EXPERIMENT-BEST_MODEL_FN': 'saved_models/NNLM_50_es-v1_0-200118_2049/model.hdf5',\n",
+              " 'EXPERIMENT-ENVIRONMENT': ['Host: None_411f2524889d',\n",
+              "  'OS: Linux 411f2524889d 4.14.137+ #1 SMP Thu Aug 8 02:47:02 PDT 2019 x86_64 x86_64 x86_64 GNU/Linux',\n",
+              "  'Python: 3.6.9 (default, Nov  7 2019, 10:44:02) \\n[GCC 8.3.0]',\n",
+              "  'Tensorflow: 2.1.0-rc1',\n",
+              "  'GPU: available',\n",
+              "  'GPU 0: Tesla T4 (UUID: GPU-b9e342d4-d011-5367-b2ea-0d6b4b4fa126)',\n",
+              "  'Keras: 2.2.4-tf',\n",
+              "  'TFHub: 0.7.0'],\n",
+              " 'EXPERIMENT-FINISHED_AT': 1579383024.4025981,\n",
+              " 'EXPERIMENT-LOG_DIR': 'logs/NNLM_50_es-v1_0-200118_2049',\n",
+              " 'EXPERIMENT-NAME': 'NNLM_50_es',\n",
+              " 'EXPERIMENT-RUNID': 'NNLM_50_es-v1_0-200118_2049',\n",
+              " 'EXPERIMENT-SAVE_DIR': 'saved_models/NNLM_50_es-v1_0-200118_2049',\n",
+              " 'EXPERIMENT-STARTED_AT': 1579380564.4832277,\n",
+              " 'EXPERIMENT-TRAINIG_TOOK': 2459.9193704128265,\n",
+              " 'EXPERIMENT-VERSION': 'v1_0',\n",
+              " 'MODEL-DENSE_ACTIVATION': 'relu',\n",
+              " 'MODEL-DENSE_DROPOUT_RATE': 0.25,\n",
+              " 'MODEL-DENSE_UNITS': 512,\n",
+              " 'MODEL-LM_IS_TRAINABLE': True,\n",
+              " 'MODEL-LOSS': 'sparse_categorical_crossentropy',\n",
+              " 'MODEL-OPTIMIZER': 'Adam',\n",
+              " 'MODEL-SUMMARY': ['Model: \"NNLM_50_es-v1_0\"',\n",
+              "  '_________________________________________________________________',\n",
+              "  'Layer (type)                 Output Shape              Param #   ',\n",
+              "  '=================================================================',\n",
+              "  'LANG_MODEL (KerasLayer)      (None, 50)                48832000  ',\n",
+              "  '_________________________________________________________________',\n",
+              "  'DEN_1 (Dense)                (None, 512)               26112     ',\n",
+              "  '_________________________________________________________________',\n",
+              "  'DROP_1 (Dropout)             (None, 512)               0         ',\n",
+              "  '_________________________________________________________________',\n",
+              "  'DEN_2 (Dense)                (None, 512)               262656    ',\n",
+              "  '_________________________________________________________________',\n",
+              "  'DROP_2 (Dropout)             (None, 512)               0         ',\n",
+              "  '_________________________________________________________________',\n",
+              "  'DEN_OUT (Dense)              (None, 1574)              807462    ',\n",
+              "  '=================================================================',\n",
+              "  'Total params: 49,928,230',\n",
+              "  'Trainable params: 49,928,230',\n",
+              "  'Non-trainable params: 0',\n",
+              "  '_________________________________________________________________'],\n",
+              " 'RANDOM_SEED': 12348,\n",
+              " 'RESULTS-BALANCED_ACCURACY': 0.7978532223417765,\n",
+              " 'RESULTS-HISTORIES': [{'loss': [1.2100044941306523,\n",
+              "    0.8399025827149283,\n",
+              "    0.7799579832859219,\n",
+              "    0.748022380493745,\n",
+              "    0.726948951409304,\n",
+              "    0.7127373908213083,\n",
+              "    0.7021543676745784,\n",
+              "    0.6941156457099414],\n",
+              "   'val_loss': [0.8400956535088389,\n",
+              "    0.7721759507279647,\n",
+              "    0.7545829629396137,\n",
+              "    0.7381396187732094,\n",
+              "    0.737146049474415,\n",
+              "    0.727107140189723,\n",
+              "    0.7290000975759405,\n",
+              "    0.7348395803602118]}],\n",
+              " 'ROWS_TO_LOAD': None,\n",
+              " 'TEST_SET_SPLIT': 0.05,\n",
+              " 'TFHUB-EMB_MODEL': 'https://tfhub.dev/google/nnlm-es-dim50/2',\n",
+              " 'TFHUB-EMB_MODEL_DIM': 50,\n",
+              " 'TRAIN-BATCH_SIZE': 1024,\n",
+              " 'TRAIN-EPOCHS': 8,\n",
+              " 'TRAIN-INITIAL_EPOCH': 0,\n",
+              " 'TRAIN-VALIDATION_SET_SPLIT': 0.001}"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 22
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "bMnnjkm0KLtM",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "meta_fn = f\"{EC['EXPERIMENT-SAVE_DIR']}/experiment-metadata.json\"\n",
+        "EC[\"EXPERIMENT-METADATA_FN\"] = meta_fn\n",
+        "with open(meta_fn, \"wt\") as fo:\n",
+        "    fo.write(json.dumps(EC))"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "k1AhqqqpKLtO",
+        "colab_type": "text"
+      },
+      "source": [
+        "### History graphs"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Dy4b6GNpKLtQ",
+        "colab_type": "code",
+        "outputId": "d9285b8f-1610-4e51-e4f5-b36cebb466bb",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 295
+        }
+      },
+      "source": [
+        "history_dict = history.history\n",
+        "loss = history_dict['loss']\n",
+        "val_loss = history_dict['val_loss']\n",
+        "epochs = range(1, len(loss) + 1)\n",
+        "plt.plot(epochs, loss, 'r', label='Training loss')\n",
+        "plt.plot(epochs, val_loss, 'b', label='Validation loss')\n",
+        "plt.title('Training and validation loss')\n",
+        "plt.xlabel('Epochs')\n",
+        "plt.ylabel('Loss')\n",
+        "plt.legend()\n",
+        "\n",
+        "plt.show()"
+      ],
+      "execution_count": 24,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "image/png": "iVBORw0KGgoAAAANSUhEUgAAAYIAAAEWCAYAAABrDZDcAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz\nAAALEgAACxIB0t1+/AAAADh0RVh0U29mdHdhcmUAbWF0cGxvdGxpYiB2ZXJzaW9uMy4xLjIsIGh0\ndHA6Ly9tYXRwbG90bGliLm9yZy8li6FKAAAgAElEQVR4nO3deXxV5bn3/89FGMI8KwoiqMiMiBFt\nURFwQMXkaK0VtVWrtfK0elprHznWttbWVj0epXo8/mr7qG0dKEdrnRC0iqJVUUAGERFk0DCDMskg\nSa7fH/cKbMJOshOys/bO/r5fr/XKHlbWvpLA/u57WPcyd0dERHJXo7gLEBGReCkIRERynIJARCTH\nKQhERHKcgkBEJMcpCEREcpyCQOqUmeWZ2TYz616X+8bJzI4yszqfZ21mp5nZ8oT7i8zs5FT2rcVr\n/cnMbqrt91dx3N+Y2SN1fVypX43jLkDiZWbbEu62AHYBpdH977v7YzU5nruXAq3qet9c4O696+I4\nZnYVcKm7n5pw7Kvq4tjSMCkIcpy773kjjj5xXuXu/6xsfzNr7O4l9VGbiNQPdQ1JlaKm/9/M7Akz\n2wpcamZfM7N3zGyTma02s3vNrEm0f2MzczPrEd1/NHr+RTPbamZvm1nPmu4bPX+WmX1sZpvN7D4z\n+5eZXV5J3anU+H0zW2JmX5jZvQnfm2dm95jZRjNbCoyu4vfzMzObWOGx+83s7uj2VWa2MPp5Pok+\nrVd2rGIzOzW63cLM/hrVtgA4rsK+N5vZ0ui4C8ysMHp8IPDfwMlRt9uGhN/tLQnff030s280s3+Y\n2SGp/G6qY2bnRfVsMrNXzax3wnM3mdkqM9tiZh8l/Kwnmtns6PG1Zvafqb6e1BF316YNdwdYDpxW\n4bHfAF8B5xI+ODQHjgdOILQojwA+Bn4Y7d8YcKBHdP9RYANQADQB/gY8Wot9DwK2AkXRc9cDu4HL\nK/lZUqnxGaAt0AP4vPxnB34ILAC6AR2B6eG/StLXOQLYBrRMOPY6oCC6f260jwEjgR3AoOi504Dl\nCccqBk6Nbt8FvAa0Bw4HPqyw74XAIdHf5OKohoOj564CXqtQ56PALdHtM6IaBwP5wP8Ar6byu0ny\n8/8GeCS63TeqY2T0N7oJWBTd7g+sALpE+/YEjohuvweMjW63Bk6I+/9Crm1qEUgq3nT359y9zN13\n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\nDBgwgAEDBuxZwnr58uX07duX733ve/Tv358zzjhjn9dJZs6cOZx44okMGjSI8847jy+++GLP65cv\nS12+2N3rr7++58I8xx57LFu3bq3177Zcbp5HUO7gg+HEE8M4wS9+EXc1IhkvjlWoO3TowNChQ3nx\nxRcpKipi4sSJXHjhhZgZ+fn5PP3007Rp04YNGzZw4oknUlhYWOl1ex944AFatGjBwoULmTdv3j7L\nSN9222106NCB0tJSRo0axbx587juuuu4++67mTZtGp06ddrnWLNmzeLhhx9mxowZuDsnnHACw4cP\np3379ixevJgnnniCP/7xj1x44YU89dRTVV5f4Dvf+Q733Xcfw4cP5xe/+AW/+tWvmDBhArfffjvL\nli2jWbNme7qj7rrrLu6//36GDRvGtm3byM/Pr8FvO7ncbhFAmD00axYUF8ddiYhUIrF7KLFbyN25\n6aabGDRoEKeddhorV65k7dq1lR5n+vTpe96QBw0axKBBg/Y8N2nSJIYMGcKxxx7LggULql1Q7s03\n3+S8886jZcuWtGrVivPPP5833ngDgJ49ezJ48GCg6qWuIVwfYdOmTQwfPhyAyy67jOnRbMZBgwZx\nySWX8Oijj+45g3nYsGFcf/313HvvvWzatKlOzmzO7RYBhHGC8ePhueegmsEnkVwX1yrURUVF/PjH\nP2b27Nls376d46ILSz322GOsX7+eWbNm0aRJE3r06JF06enqLFu2jLvuuov33nuP9u3bc/nll9fq\nOOXKl7CGsIx1dV1DlXnhhReYPn06zz33HLfddhvz589n/PjxnHPOOUyePJlhw4YxdepU+vTpU+ta\nQS0C6NMHevXSOIFIBmvVqhUjRozgu9/97j6DxJs3b+aggw6iSZMmTJs2jRXVLC9/yimn8PjjjwPw\nwQcfMC+aKLJlyxZatmxJ27ZtWbt2LS++uPc6Wa1bt07aD3/yySfzj3/8g+3bt/Pll1/y9NNPc/LJ\nJ9f4Z2vbti3t27ff05r461//yvDhwykrK+Ozzz5jxIgR3HHHHWzevJlt27bxySefMHDgQG688UaO\nP/54Pvrooxq/ZkVqEZiFVsG998KWLdCmTdwViUgSY8eO5bzzzttnBtEll1zCueeey8CBAykoKKj2\nk/G4ceO44oor6Nu3L3379t3TsjjmmGM49thj6dOnD4cddtg+S1hfffXVjB49mkMPPZRp06bteXzI\n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\n/wPBr2eF7pYadgAAAABJRU5ErkJggg==\n",
+            "text/plain": [
+              "<Figure size 432x288 with 1 Axes>"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          }
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "dHvsM_RZKLtS",
+        "colab_type": "text"
+      },
+      "source": [
+        "## Results Analysis"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "aigyOM2TKLtT",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "test = pd.DataFrame({\n",
+        "    'title':np.array(test_set_data),\n",
+        "    'real':real_categories,\n",
+        "    'predicted':predicted_categories\n",
+        "})\n",
+        "#test"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "M5OIrFZfKLtV",
+        "colab_type": "code",
+        "outputId": "bba13897-0da9-4ac6-a1fa-671afdde7f58",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 1000
+        }
+      },
+      "source": [
+        "pd.options.display.max_rows = 50\n",
+        "test.head(50)"
+      ],
+      "execution_count": 26,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>title</th>\n",
+              "      <th>real</th>\n",
+              "      <th>predicted</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>Apple Mac Mini I5 (mid 2011) 2.3 Ghz Impecable...</td>\n",
+              "      <td>MINI_PCS</td>\n",
+              "      <td>MINI_PCS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>Carabina 22 Diana</td>\n",
+              "      <td>AIRSOFT_GUNS</td>\n",
+              "      <td>AIRSOFT_GUNS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>Z Bieleta Delantera Izquierda Peugeot 504 Gr-g...</td>\n",
+              "      <td>SWAY_BAR_LINKS</td>\n",
+              "      <td>SWAY_BAR_LINKS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>Saaqaans Bsr-01 Maquinilla De Afeitar De Corte...</td>\n",
+              "      <td>COMBS</td>\n",
+              "      <td>SHAVING_MACHINES</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>Vino Valmont Tinto Caja X6 X750cc</td>\n",
+              "      <td>WINES</td>\n",
+              "      <td>WINES</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>5</th>\n",
+              "      <td>Mecedora De Madera Marca Michael Thonet</td>\n",
+              "      <td>SOFAS</td>\n",
+              "      <td>ANTIQUE_CHAIRS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>6</th>\n",
+              "      <td>Tira De Led  Lj64-o3381a P/panel Lty400hl-04, ...</td>\n",
+              "      <td>TV_REPLACEMENT_BACKLIGHT_LED_STRIPS</td>\n",
+              "      <td>LED_STRIPS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>7</th>\n",
+              "      <td>Cadena Ek Japon 428-118l Zanella Sapucai 125 (...</td>\n",
+              "      <td>MOTORCYCLE_TRANSMISSION_KITS</td>\n",
+              "      <td>MOTORCYCLE_DISTRIBUTION_CHAINS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>8</th>\n",
+              "      <td>Boligrafo Faber Castell Trilux X 10 Unidades</td>\n",
+              "      <td>PENS</td>\n",
+              "      <td>PENS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>9</th>\n",
+              "      <td>Cerradura Para Puerta Corrediza Kallay 5002</td>\n",
+              "      <td>DOOR_AND_WINDOW_LOCKS</td>\n",
+              "      <td>DOOR_AND_WINDOW_LOCKS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>10</th>\n",
+              "      <td>Ventana Aluminio 120x90 Vidrio 4mm  Cuotas!!</td>\n",
+              "      <td>WINDOWS</td>\n",
+              "      <td>WINDOWS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>11</th>\n",
+              "      <td>Pelota Afa 17 Argentum Omb adidas Sport 78 Tie...</td>\n",
+              "      <td>FOOTBALL_BALLS</td>\n",
+              "      <td>FOOTBALL_BALLS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>12</th>\n",
+              "      <td>Aspiradora Liliana La800 1800w Con Bolsa Tubos...</td>\n",
+              "      <td>VACUUM_CLEANERS</td>\n",
+              "      <td>VACUUM_CLEANERS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>13</th>\n",
+              "      <td>Campera De Bebe Nena</td>\n",
+              "      <td>JACKETS_AND_COATS</td>\n",
+              "      <td>JACKETS_AND_COATS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>14</th>\n",
+              "      <td>Gearwrench 8940 Juego De Destornilladores De T...</td>\n",
+              "      <td>PATIO_FURNITURE_SETS</td>\n",
+              "      <td>SCREWDRIVERS_SETS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>15</th>\n",
+              "      <td>Peluche Robot Artesanal Altísima Calidad Tiern...</td>\n",
+              "      <td>STUFFED_TOYS</td>\n",
+              "      <td>STUFFED_TOYS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>16</th>\n",
+              "      <td>Balanza Systel Clipse 30kg Con Bateria</td>\n",
+              "      <td>INDUSTRIAL_AND_COMMERCIAL_SCALES</td>\n",
+              "      <td>INDUSTRIAL_AND_COMMERCIAL_SCALES</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>17</th>\n",
+              "      <td>Maybelline Base De Maquillaje Pure Piel Grasa...</td>\n",
+              "      <td>FOUNDATIONS</td>\n",
+              "      <td>FOUNDATIONS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>18</th>\n",
+              "      <td>Red Futbol Tenis 3 Mts Playa Jardín Parque Par...</td>\n",
+              "      <td>FOOTBALL_BALLS</td>\n",
+              "      <td>FOOTBALL_GOALS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>19</th>\n",
+              "      <td>Cuaderno A5 -línea París / Londres- Encuaderna...</td>\n",
+              "      <td>NOTEBOOKS_AND_WRITING_PADS</td>\n",
+              "      <td>NOTEBOOKS_AND_WRITING_PADS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>20</th>\n",
+              "      <td>Termogel - Lidherma Caballito</td>\n",
+              "      <td>BODY_SKIN_CARE_PRODUCTS</td>\n",
+              "      <td>BODY_SKIN_CARE_PRODUCTS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>21</th>\n",
+              "      <td>Parrilla De Suspencion Peugeot 206/ 207 X 2</td>\n",
+              "      <td>AUTOMOTIVE_SUSPENSION_CONTROL_ARMS</td>\n",
+              "      <td>AUTOMOTIVE_SUSPENSION_CONTROL_ARMS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>22</th>\n",
+              "      <td>Almohadón Silla Algarrobo Lolafajna X6u 40x5cm...</td>\n",
+              "      <td>CUSHIONS</td>\n",
+              "      <td>CUSHIONS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>23</th>\n",
+              "      <td>Kit De Airbag De Fox,suran Msi Original</td>\n",
+              "      <td>AIRBAGS</td>\n",
+              "      <td>AIRBAGS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>24</th>\n",
+              "      <td>Kit De Limpieza Clarinete Conn-selmer Wood Cla...</td>\n",
+              "      <td>CLARINETS</td>\n",
+              "      <td>CLARINETS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>25</th>\n",
+              "      <td>Amortiguador Trasero Yamaha Ybr 125 Original C...</td>\n",
+              "      <td>MOTORCYCLE_SHOCK_ABSORBERS</td>\n",
+              "      <td>MOTORCYCLE_SHOCK_ABSORBERS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>26</th>\n",
+              "      <td>Faro Actros 11/ Lateral Ambar Izquierdo</td>\n",
+              "      <td>CAR_TURN_SIGNAL_LIGHTS</td>\n",
+              "      <td>CAR_TURN_SIGNAL_LIGHTS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>27</th>\n",
+              "      <td>Anillo Pene Vibrador Recargable Oyeah</td>\n",
+              "      <td>PENIS_RINGS</td>\n",
+              "      <td>PENIS_RINGS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>28</th>\n",
+              "      <td>Exprimidor Windmere Ja200! Cencor Electrónica ...</td>\n",
+              "      <td>SQUEEZERS</td>\n",
+              "      <td>SQUEEZERS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>29</th>\n",
+              "      <td>Mini Figuras De Plantas Vs Zombies X 8</td>\n",
+              "      <td>ACTION_FIGURES</td>\n",
+              "      <td>ACTION_FIGURES</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>30</th>\n",
+              "      <td>Rollo De Cuerda Hacker Polytag Green 1.23 / 1....</td>\n",
+              "      <td>RACKET_STRINGS</td>\n",
+              "      <td>RACKET_STRINGS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>31</th>\n",
+              "      <td>Cable Delgado Hmdi De Alta Velocidad Bell'o Di...</td>\n",
+              "      <td>AUDIO_AND_VIDEO_CABLES_AND_ADAPTERS</td>\n",
+              "      <td>DATA_CABLES_AND_ADAPTERS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>32</th>\n",
+              "      <td>Lubricante Shell Spirax S1 Atf Taza 4lts</td>\n",
+              "      <td>ENGINE_OILS</td>\n",
+              "      <td>ENGINE_OILS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>33</th>\n",
+              "      <td>Carro Zorra Stanley 200 Kg Plataforma Acero Sx...</td>\n",
+              "      <td>HAND_TRUCKS</td>\n",
+              "      <td>HAND_TRUCKS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>34</th>\n",
+              "      <td>Arranque Case 1450b 504 Unipoint</td>\n",
+              "      <td>STARTERS</td>\n",
+              "      <td>STARTERS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>35</th>\n",
+              "      <td>Cooler Titan Para Atlon Xp</td>\n",
+              "      <td>DESKTOP_COMPUTER_COOLERS_AND_FANS</td>\n",
+              "      <td>DESKTOP_COMPUTER_COOLERS_AND_FANS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>36</th>\n",
+              "      <td>Planchita Para Pelo Remington S5505cp Garantia</td>\n",
+              "      <td>HAIR_STRAIGHTENERS</td>\n",
+              "      <td>HAIR_STRAIGHTENERS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>37</th>\n",
+              "      <td>Máscara Facial Swiss Eye Neoprene Con Lentes I...</td>\n",
+              "      <td>FACE_MASKS</td>\n",
+              "      <td>FACE_MASKS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>38</th>\n",
+              "      <td>Carretel De Repuesto Reel Tech Long Casting Y ...</td>\n",
+              "      <td>FISHING_REELS</td>\n",
+              "      <td>FISHING_REELS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>39</th>\n",
+              "      <td>Tablet Samsung Tab E Sm-t113</td>\n",
+              "      <td>TABLETS</td>\n",
+              "      <td>TABLETS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>40</th>\n",
+              "      <td>Gin Beefeater 750ml Recoleta</td>\n",
+              "      <td>GINS</td>\n",
+              "      <td>GINS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>41</th>\n",
+              "      <td>Pantalla Notebook Acer Aspire 5551 Nueva Con G...</td>\n",
+              "      <td>LAPTOP_LCD_SCREENS</td>\n",
+              "      <td>LAPTOP_LCD_SCREENS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>42</th>\n",
+              "      <td>Camara Principal Blu Vivo Xl V0030uu</td>\n",
+              "      <td>CELLPHONE_REPLACEMENT_CAMERAS</td>\n",
+              "      <td>CELLPHONE_REPLACEMENT_CAMERAS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>43</th>\n",
+              "      <td>Saxo Master Class A Todo El Pais 9567d</td>\n",
+              "      <td>SAXOPHONES</td>\n",
+              "      <td>SAXOPHONES</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>44</th>\n",
+              "      <td>Caretas Máscaras Famosos +300 Personajes. Lili...</td>\n",
+              "      <td>PARTY_MASKS</td>\n",
+              "      <td>PARTY_MASKS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>45</th>\n",
+              "      <td>Tanque De Nafta Puch 150 Del 63</td>\n",
+              "      <td>MOTORCYCLE_GASOLINE_TANKS</td>\n",
+              "      <td>MOTORCYCLE_GASOLINE_TANKS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>46</th>\n",
+              "      <td>Papel Muresco Urban Home 4712/2 Vinilico</td>\n",
+              "      <td>WALLPAPERS</td>\n",
+              "      <td>WALLPAPERS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>47</th>\n",
+              "      <td>Teclado Korg Kross 61</td>\n",
+              "      <td>MUSICAL_KEYBOARDS</td>\n",
+              "      <td>MUSICAL_KEYBOARDS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>48</th>\n",
+              "      <td>Trenes Y Tractores De Madera</td>\n",
+              "      <td>TOY_TRAINS</td>\n",
+              "      <td>TOY_TRAINS</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>49</th>\n",
+              "      <td>Césped Cervato Custom Arte Dies - Sombreros Ap...</td>\n",
+              "      <td>SODS</td>\n",
+              "      <td>DECORATIVE_BOXES</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "                                                title  ...                           predicted\n",
+              "0   Apple Mac Mini I5 (mid 2011) 2.3 Ghz Impecable...  ...                            MINI_PCS\n",
+              "1                                   Carabina 22 Diana  ...                        AIRSOFT_GUNS\n",
+              "2   Z Bieleta Delantera Izquierda Peugeot 504 Gr-g...  ...                      SWAY_BAR_LINKS\n",
+              "3   Saaqaans Bsr-01 Maquinilla De Afeitar De Corte...  ...                    SHAVING_MACHINES\n",
+              "4                   Vino Valmont Tinto Caja X6 X750cc  ...                               WINES\n",
+              "5             Mecedora De Madera Marca Michael Thonet  ...                      ANTIQUE_CHAIRS\n",
+              "6   Tira De Led  Lj64-o3381a P/panel Lty400hl-04, ...  ...                          LED_STRIPS\n",
+              "7   Cadena Ek Japon 428-118l Zanella Sapucai 125 (...  ...      MOTORCYCLE_DISTRIBUTION_CHAINS\n",
+              "8        Boligrafo Faber Castell Trilux X 10 Unidades  ...                                PENS\n",
+              "9         Cerradura Para Puerta Corrediza Kallay 5002  ...               DOOR_AND_WINDOW_LOCKS\n",
+              "10       Ventana Aluminio 120x90 Vidrio 4mm  Cuotas!!  ...                             WINDOWS\n",
+              "11  Pelota Afa 17 Argentum Omb adidas Sport 78 Tie...  ...                      FOOTBALL_BALLS\n",
+              "12  Aspiradora Liliana La800 1800w Con Bolsa Tubos...  ...                     VACUUM_CLEANERS\n",
+              "13                              Campera De Bebe Nena   ...                   JACKETS_AND_COATS\n",
+              "14  Gearwrench 8940 Juego De Destornilladores De T...  ...                   SCREWDRIVERS_SETS\n",
+              "15  Peluche Robot Artesanal Altísima Calidad Tiern...  ...                        STUFFED_TOYS\n",
+              "16             Balanza Systel Clipse 30kg Con Bateria  ...    INDUSTRIAL_AND_COMMERCIAL_SCALES\n",
+              "17   Maybelline Base De Maquillaje Pure Piel Grasa...  ...                         FOUNDATIONS\n",
+              "18  Red Futbol Tenis 3 Mts Playa Jardín Parque Par...  ...                      FOOTBALL_GOALS\n",
+              "19  Cuaderno A5 -línea París / Londres- Encuaderna...  ...          NOTEBOOKS_AND_WRITING_PADS\n",
+              "20                      Termogel - Lidherma Caballito  ...             BODY_SKIN_CARE_PRODUCTS\n",
+              "21        Parrilla De Suspencion Peugeot 206/ 207 X 2  ...  AUTOMOTIVE_SUSPENSION_CONTROL_ARMS\n",
+              "22  Almohadón Silla Algarrobo Lolafajna X6u 40x5cm...  ...                            CUSHIONS\n",
+              "23            Kit De Airbag De Fox,suran Msi Original  ...                             AIRBAGS\n",
+              "24  Kit De Limpieza Clarinete Conn-selmer Wood Cla...  ...                           CLARINETS\n",
+              "25  Amortiguador Trasero Yamaha Ybr 125 Original C...  ...          MOTORCYCLE_SHOCK_ABSORBERS\n",
+              "26            Faro Actros 11/ Lateral Ambar Izquierdo  ...              CAR_TURN_SIGNAL_LIGHTS\n",
+              "27              Anillo Pene Vibrador Recargable Oyeah  ...                         PENIS_RINGS\n",
+              "28  Exprimidor Windmere Ja200! Cencor Electrónica ...  ...                           SQUEEZERS\n",
+              "29             Mini Figuras De Plantas Vs Zombies X 8  ...                      ACTION_FIGURES\n",
+              "30  Rollo De Cuerda Hacker Polytag Green 1.23 / 1....  ...                      RACKET_STRINGS\n",
+              "31  Cable Delgado Hmdi De Alta Velocidad Bell'o Di...  ...            DATA_CABLES_AND_ADAPTERS\n",
+              "32           Lubricante Shell Spirax S1 Atf Taza 4lts  ...                         ENGINE_OILS\n",
+              "33  Carro Zorra Stanley 200 Kg Plataforma Acero Sx...  ...                         HAND_TRUCKS\n",
+              "34                   Arranque Case 1450b 504 Unipoint  ...                            STARTERS\n",
+              "35                         Cooler Titan Para Atlon Xp  ...   DESKTOP_COMPUTER_COOLERS_AND_FANS\n",
+              "36     Planchita Para Pelo Remington S5505cp Garantia  ...                  HAIR_STRAIGHTENERS\n",
+              "37  Máscara Facial Swiss Eye Neoprene Con Lentes I...  ...                          FACE_MASKS\n",
+              "38  Carretel De Repuesto Reel Tech Long Casting Y ...  ...                       FISHING_REELS\n",
+              "39                       Tablet Samsung Tab E Sm-t113  ...                             TABLETS\n",
+              "40                       Gin Beefeater 750ml Recoleta  ...                                GINS\n",
+              "41  Pantalla Notebook Acer Aspire 5551 Nueva Con G...  ...                  LAPTOP_LCD_SCREENS\n",
+              "42               Camara Principal Blu Vivo Xl V0030uu  ...       CELLPHONE_REPLACEMENT_CAMERAS\n",
+              "43             Saxo Master Class A Todo El Pais 9567d  ...                          SAXOPHONES\n",
+              "44  Caretas Máscaras Famosos +300 Personajes. Lili...  ...                         PARTY_MASKS\n",
+              "45                    Tanque De Nafta Puch 150 Del 63  ...           MOTORCYCLE_GASOLINE_TANKS\n",
+              "46           Papel Muresco Urban Home 4712/2 Vinilico  ...                          WALLPAPERS\n",
+              "47                              Teclado Korg Kross 61  ...                   MUSICAL_KEYBOARDS\n",
+              "48                       Trenes Y Tractores De Madera  ...                          TOY_TRAINS\n",
+              "49  Césped Cervato Custom Arte Dies - Sombreros Ap...  ...                    DECORATIVE_BOXES\n",
+              "\n",
+              "[50 rows x 3 columns]"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 26
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "64dVyQpZKLtY",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "test.to_csv(directory+\"/test-results.csv\", index=False)"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "eBJlEBW-KLta",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "with open(directory+\"/inverse_cat_dict.pickle\", \"wb\") as fo:\n",
+        "    pickle.dump(inverse_cat_dict, fo)"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "dB_MyEqLKLtd",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "with open(directory+\"/predictions.pickle\", \"wb\") as fo:\n",
+        "    pickle.dump(predictions, fo)"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    }
+  ]
+}
