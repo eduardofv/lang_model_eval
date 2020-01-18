@@ -1,0 +1,2 @@
+#$1 --runtime=nvidia
+docker run $1 --rm -it -u $(id -u):$(id -g) -v $(pwd)/data:/root/data -v $(pwd):/root -p 80:80 -p 6006:6006 -p 8888:8888 -e "HOST_HOSTNAME=$(hostname)" lm_eval:latest bash
