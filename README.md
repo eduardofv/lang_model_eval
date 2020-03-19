@@ -1,4 +1,4 @@
-# Evaluación de Modelos de Lenguaje en Español en una Tarea de Clasificación Multiclase
+# Evaluación de Modelos Neuronales de Lenguaje en Español en una Tarea de Clasificación Multiclase
 
 ## Objetivo
 
