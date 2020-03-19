@@ -44,19 +44,19 @@ Resultados completos en este [notebook](analysis/lmevME-LM-Analysis_v1.ipynb) o 
 
 - **Los modelos de lenguaje en español tienen un mejor desempeño que los modelos en inglés,** donde los primerios tuvieron en promedio BAC=0.7434 vs 0.7190 de los segundos. Es interesante ver también el BAC de cada experimento.
 
-![bac_by_lang.png](bac_by_lang.png)
+![img/bac_by_lang.png](bac_by_lang.png)
 
 - **Los modelos normalizados (en español) tuvieron los mejores resultados.** En la gráfica abajo podemos observar los resultados promedio de cada modelo.
 
-![bac_by_lm.png](bac_by_lm.png)
+![img/bac_by_lm.png](bac_by_lm.png)
 
 - Es interesante ver que **en los modelos normalizados, el modelo de 50 dimensiones tuvo mejor desempeño que el modelo de 128 dimensiones.** En la siguiente gráfica de *loss vs bac* vemos que el modelo de 50 dimensiones tuvo una menor variación que el modelo de 128 dimensiones. Sin embargo en los demás casos los modelos de 128 dimensiones tuvieron mejor desempeño que los de 50 dimensiones. Sería útil evaluar mas a profundidad y determinar si las optimizaciones a hiperparámetros pudieran explicar esa diferencia.
 
-![loss_vs_bac.png](loss_vs_bac.png)
+![img/loss_vs_bac.png](loss_vs_bac.png)
 
 - Este último punto se puede reforzar observando las curvas de aprendizaje donde podemos ver que el modelo 128dim normalizado tuvo una menor pérdida (loss) pero que comenzó a sobreajustar antes, por lo que una cuidadosa optimización de hiperparámetros podría ayudarle a tener un menor desempeño
 
-![loss_training_curve.png](loss_training_curve.png)
+![img/loss_training_curve.png](loss_training_curve.png)
 
 - Los experimentos se corrieron en el ambiente de [Google Colaboratory](https://colab.research.google.com/) el cual nos dió dos distintos tipos de GPU, en algunas ocasiones una Tesla T4 y en otra Tesla P100. Con ello podemos observar las siguientes conclusiones:
 
@@ -64,7 +64,7 @@ Resultados completos en este [notebook](analysis/lmevME-LM-Analysis_v1.ipynb) o 
 	- Los modelos entrenados en GPU Tesla P100 entrenan aproximadamente en la mitad del tiempo de las GPU Tesla T4
 	- No hay una gran diferecia entre los modelos normalizados y no normalizados
 
-![bac_vs_time.png](bac_vs_time.png)
+![img/bac_vs_time.png](bac_vs_time.png)
 
 
 # Spanish Language Model Evaluation for Multi-class Classification Tasks
