@@ -8,4 +8,4 @@ else
 	echo "NVIDIA not found"
 fi
 	
-docker run $use_nvidia --rm -it -u $(id -u):$(id -g) -v $(pwd)/data:/root/data -v $(pwd):/root -e "HOST_HOSTNAME=$(hostname)" lm_eval:latest /bin/bash
+docker run $use_nvidia --rm -it -v $(pwd)/data:/root/data -v $(pwd):/root -e "HOST_HOSTNAME=$(hostname)" lm_eval:latest /bin/bash

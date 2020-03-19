@@ -24,10 +24,14 @@ RUN pip install sklearn
 RUN pip install tqdm
 RUN pip install tensorflow-hub
 RUN pip install keras
-#Workaround porque instala tf-2 no-gpu https://github.com/tensorflow/text/issues/195
-#RUN pip install tensorflow-text
-#RUN pip uninstall -y tensorflow
+RUN pip install tensorflow-text==2.1.0-rc0
+RUN pip install pytest
+RUN pip install sentencepiece
+RUN pip install bert-for-tf2
+RUN pip install transformers
+RUN pip install seaborn
 
-#RUN jupyter notebook --generate-config
-#RUN echo "c.NotebookApp.password='sha1:3e8f1e7d4570:9e684db783a0ff0f73590f960ab2a69b9f6e9fe7'" >> /root/jupyter_notebook_config.py
+ENV PYTORCH_PRETRAINED_BERT_CACHE="/root/cache/hug"
 
+RUN apt install -y vim 
+RUN pip install torch==1.4.0+cpu torchvision==0.5.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
