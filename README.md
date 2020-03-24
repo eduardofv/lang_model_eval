@@ -1,4 +1,4 @@
-[Español](#evaluación-de-modelos-neuronales-de-lenguaje-en-español-en-una-tarea-de-clasificación-multiclase) | [English](#spanish-language-model-evaluation-for-multi-class-classification-tasks)
+[English](#spanish-language-model-evaluation-for-multi-class-classification-tasks)
 
 # Evaluación de Modelos Neuronales de Lenguaje en Español en una Tarea de Clasificación Multiclase
 
@@ -73,6 +73,8 @@ Resultados completos se pueden consultar en este [notebook](analysis/lmevME-LM-A
 
 Iremos agregando una comparación equivalente con otros modelos de lenguaje facilmente adaptable a esta tarea. Tambien probaremos optimizaciones de hiperparámetros de los mejores models para buscar llegar a los mejores modelos. Finalmente se propondrán aplicaciones reales de estos modelos.
 
+
+[Español](#evaluación-de-modelos-neuronales-de-lenguaje-en-español-en-una-tarea-de-clasificación-multiclase)
 
 # Spanish Language Model Evaluation for Multi-class Classification Tasks
 
