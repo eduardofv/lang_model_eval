@@ -1,3 +1,5 @@
+[Español](#evaluación-de-modelos-neuronales-de-lenguaje-en-español-en-una-tarea-de-clasificación-multiclase) | [English](#spanish-language-model-evaluation-for-multi-class-classification-tasks)
+
 # Evaluación de Modelos Neuronales de Lenguaje en Español en una Tarea de Clasificación Multiclase
 
 ## Objetivo
@@ -75,6 +77,75 @@ Iremos agregando una comparación equivalente con otros modelos de lenguaje faci
 # Spanish Language Model Evaluation for Multi-class Classification Tasks
 
 ## Objective
+
+We have developed a comparision study between several language models that are easy to implement in text classification tasks using deep neural networks. These models are available trough [Tensorflow Hub](https://tfhub.dev/s?module-type=text-embedding) and can be used very easily as a text embeddings layer input to a multi-layer perceptron (MLP). The objective of this comparison study is to create and overview of the characteristics and advantages of each model for tasks in Spanish. As a proxy task we use a simple multiclass classification task of short texts hoping that some generalizations found can be applied to other natural language processing tasks such as sentiment analysis, textual similarity o named-entity recognition. We also expect that the classifier model can be reused, adapted or extended to other tasks.
+
+## Models and Data
+
+### Language Models
+
+To this moment we have evaluated models that belong to the [Neural-Net Language Models](https://tfhub.dev/google/collections/nnlm/1) family, trained in Spanish using Spanish Google News 50B corpus. These models are in several versions: with 50 or 128 dimensional embeddings and with or without text normalization. We also evaluated it's equivalent models trained in English to get a sense of the benefit of using language specific models.
+
+Evaluated models:
+
+- nnlm-en-dim128
+- nnlm-en-dim128-with-normalization
+- nnlm-en-dim50
+- nnlm-en-dim50-with-normalization
+- nnlm-es-dim128
+- nnlm-es-dim128-with-normalization
+- nnlm-es-dim50
+- nnlm-es-dim50-with-normalization
+
+### Dataset and classification task
+
+The classification task that we are using as benchmark is the one proposed by the [MercadoLibre Data Challenge 2019](https://ml-challenge.mercadolibre.com/). It consists of a dataset of 10 million ad titles classified in more than 1,500 categories. [Balanced Accuracy Score](https://ml-challenge.mercadolibre.com/rules) is used as evaluation metric as required by the original challenge. As the [dataset](https://ml-challenge.mercadolibre.com/downloads) contains half of the data in Spanish and half in portuguese, only the first langague records was used. In the classification tasks we used a random subset of 1 million records as training set with a 5% of them used as validation set. 25,000 more records were used as test set.
+
+### Neural Network Architecture
+
+The neural network connects the output of the language model as input embeddings to a 3 layer multilayer perceptron. Each of the 2 first dense layers has 512 units and the last one has as many units as the total number of classes of the classifier. Each dense layer is connected to the next through a Dropout layer. The whole network was trained with Adam optimizer with Keras default values and Sparse Categorical Crossentropy loss. The batch size for training was set to 4096 for all the tests. Each model was trained for a maximum of 10 epochs but applying EarlyStopping with patience set to 3, and in several cases the training did stop earlier. We did not any further hyperparameter optimization as the objective of the study is to get a general idea of the behaviour of the language models and not the optimal classifier for each of them.
+
+TODO: diagrams and explanation
+
+### Experiments execution
+
+In this [notebook](https://github.com/eduardofv/lang_model_eval/blob/master/analysis/NNLM_50_es-v1_0.ipynb) is an example of the experiment process. It's worth mentioning that the final experiments were run using batch processes and not this specific notebook. The results of each experiment can be seen [here](https://github.com/eduardofv/lang_model_eval/blob/master/experiments).
+
+Each model was run 4 times (trials). In the analysis results were averaged where it made sense. Each trial generated a metadata file with the experiment configuration and results obtained. Those can be seen in the [same link](https://github.com/eduardofv/lang_model_eval/blob/master/experiments).
+
+The experiments were run using a framework developed ad-hoc in [Google Colaboratory](https://colab.research.google.com/) and Google Cloud Platform. The results were downloaded to a local enviroment for analysis.
+
+## Results and conclusion
+
+The complete result analysis can be seen on this [notebook](https://github.com/eduardofv/lang_model_eval/blob/master/doc/lmevME-LM-Analysis_v1.html) or this [HTML](https://github.com/eduardofv/lang_model_eval/blob/master/doc/lmevME-LM-Analysis_v1.html).
+
+- Not surprisingly **language models in Spanish have a better performance than models in English.** The first ones obtained an average BAC=0.7434 and the second ones got an average BAC=0.7190. It's also interesting to see the individual results in the aforementioned notebook.
+
+![bac_by_lang.png](img/bac_by_lang.png)
+
+- **Normalized models (in Spanish) have the best results.** In the next figure shows average results for each language model.
+
+![bac_by_lm.png](img/bac_by_lm.png)
+
+- It's also worth noting that **in normalized models, the 50 dimensions model had a better performance than the 128 dimensions model.** The next figure *loss vs bac for all trials* shows that the Spanish, normalized, 50 dimensions model BAC had a lower variance than the 128 dimensions equivalent despite the fact that the overall best model was 128 dim. But in general the 128 dimensions models had a better performance than their 50 dimensions equivalents. It could be useful to perform further study if hyperparameter optimization could explain that difference.
+
+![loss_vs_bac.png](img/loss_vs_bac.png)
+
+- This last point can be reinforced watching the learning curves where it can be observed that the 128dim Spanish normalized model had a lower loss but started to overfit earlier. This suggest that a careful hyperparameter optimization may help to improve it's overall performance.
+
+![loss_training_curve.png](img/loss_training_curve.png)
+
+- These experiments were run in [Google Colaboratory](https://colab.research.google.com/) in which is not possible to ensure the kind of GPU that will be available. Fortunately this can be used to observe the differences in performance of training time each has. For these experiments we got Tesla T4 and Tesla P100 GPUs. We can observe the following:
+
+	- 50 dimensions models train in about half the time of their 128 dimensions equivalents.
+	- Equivalent models trained in Tesla P100 GPUs train in about half the time as those trained on Tesla T4 GPUs.
+	- There is little difference in training time between normalized and non-normalized models.
+
+![bac_vs_time.png](img/bac_vs_time.png)
+
+## Next Steps
+
+We will be adding comparisons with other language models that could be easily used instead of those previously evaluated. We will also run hyperparameter optimization for some of the models to search for best models for this specific task. Finally we will propose practical real world applications for these models.
 
 # Code and Data
 
