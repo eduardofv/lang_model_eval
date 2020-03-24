@@ -8,7 +8,7 @@ Realizamos una comparación entre varios modelos de lenguaje que son fácilmente
 
 ### Modelos de lenguaje
 
-Hasta este momento hemos evaluamos modelos pertenecientes a la familia [Neural-Net Language Models](https://tfhub.dev/google/collections/nnlm/1) entrenados en el corpus Spanish Google News 50B, con embeddings de 50 y 128 dimensiones, con y sin normalización de textos. Evaluamos también los modelos equivalentes en inglés con el fin de comparar el beneficio de usar la versión de su lenguaje específico. 
+Hasta este momento hemos evaluado modelos pertenecientes a la familia [Neural-Net Language Models](https://tfhub.dev/google/collections/nnlm/1) entrenados en el corpus Spanish Google News 50B, con embeddings de 50 y 128 dimensiones, con y sin normalización de textos. Evaluamos también los modelos equivalentes en inglés con el fin de comparar el beneficio de usar la versión de su lenguaje específico. 
 
 Modelos evaluados. 
 
