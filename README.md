@@ -166,5 +166,9 @@ saved_models/
 
 # Referencias
 
+## Blog posts originales
+[Blog post en español](http://eduardofv.com/2020/04/01/comparacion-de-modelos-de-lenguaje-en-espanol-con-fines-de-clasificacion/)
+
+[English blog post](http://eduardofv.com/2020/03/31/comparing-neural-language-models-for-classification-in-spanish/)
 
 
